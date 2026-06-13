@@ -67,7 +67,8 @@ The discovery workflow:
 
 1. Upload `search_keywords.csv` with `keyword`, `category`, `country`, `language`, and `max_results`.
 2. Select a provider: `brave`, `bing`, or `serpapi`.
-3. Click `Find candidate websites`.
+3. Enter the provider API key if it is not already configured on the server.
+4. Click `Find candidate websites`.
 4. Review the discovered URLs, confidence scores, and discovery reasons.
 5. Download `candidate_urls.csv` or `candidate_urls.xlsx`.
 6. Use `Send candidates to analysis` or upload the candidate CSV in the normal lead analysis workflow.
@@ -92,7 +93,7 @@ The app does not scrape Google search result pages directly. It only uses suppor
 
 1. Copy `.env.example` to `.env`.
 2. Set `SEARCH_PROVIDER` to `brave`, `bing`, or `serpapi`.
-3. Add the matching API key.
+3. Add the matching API key, or enter it in the website discovery tab at runtime.
 4. Add keywords in `data/input/search_keywords.csv`.
 
 Supported environment variables:

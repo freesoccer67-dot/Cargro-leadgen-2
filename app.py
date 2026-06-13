@@ -113,6 +113,15 @@ def show_discovery_tab(settings: Settings) -> None:
             if settings.search_provider in {"manual", "brave", "bing", "serpapi"}
             else 0,
         )
+        provider_api_key = ""
+        if provider in {"brave", "bing", "serpapi"}:
+            configured_key = provider_key_for_settings(settings, provider)
+            provider_api_key = st.text_input(
+                "API key",
+                value=configured_key,
+                type="password",
+                help="Use this when the website server does not have the provider key configured.",
+            ).strip()
         max_results = st.number_input("Max results per keyword", min_value=1, max_value=50, value=20)
     with controls_right:
         import_file = st.file_uploader(
@@ -137,7 +146,7 @@ def show_discovery_tab(settings: Settings) -> None:
         ]
     )
 
-    discover_settings = replace(settings, search_provider=provider)
+    discover_settings = settings_for_provider(settings, provider, provider_api_key)
     if provider == "manual":
         st.info("No search provider configured. You can still use manual URL mode or upload a candidate URL CSV.")
 
@@ -202,6 +211,27 @@ def ensure_session_state() -> None:
     st.session_state.setdefault("crawl_log", pd.DataFrame())
     st.session_state.setdefault("candidate_urls", pd.DataFrame())
     st.session_state.setdefault("discovery_analysis_urls", pd.DataFrame(columns=["url", "category"]))
+
+
+def provider_key_for_settings(settings: Settings, provider: str) -> str:
+    if provider == "brave":
+        return settings.brave_search_api_key
+    if provider == "bing":
+        return settings.bing_search_api_key
+    if provider == "serpapi":
+        return settings.serpapi_api_key
+    return ""
+
+
+def settings_for_provider(settings: Settings, provider: str, api_key: str = "") -> Settings:
+    updates = {"search_provider": provider}
+    if provider == "brave":
+        updates["brave_search_api_key"] = api_key
+    elif provider == "bing":
+        updates["bing_search_api_key"] = api_key
+    elif provider == "serpapi":
+        updates["serpapi_api_key"] = api_key
+    return replace(settings, **updates)
 
 
 def inject_netflix_theme() -> None:
