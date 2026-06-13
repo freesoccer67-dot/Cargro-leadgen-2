@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import requests
 
@@ -68,7 +69,7 @@ def _brave_search(
             response.raise_for_status()
             data = response.json()
         except requests.RequestException as exc:
-            warnings.append(f"Brave search failed for '{keyword}': {exc}")
+            warnings.append(f"Brave search failed for '{keyword}': {_safe_request_error(exc)}")
             continue
 
         for rank, item in enumerate(data.get("web", {}).get("results", []), start=1):
@@ -110,7 +111,7 @@ def _bing_search(
             response.raise_for_status()
             data = response.json()
         except requests.RequestException as exc:
-            warnings.append(f"Bing search failed for '{keyword}': {exc}")
+            warnings.append(f"Bing search failed for '{keyword}': {_safe_request_error(exc)}")
             continue
 
         for rank, item in enumerate(data.get("webPages", {}).get("value", []), start=1):
@@ -153,7 +154,7 @@ def _serpapi_search(
             response.raise_for_status()
             data = response.json()
         except requests.RequestException as exc:
-            warnings.append(f"SerpAPI search failed for '{keyword}': {exc}")
+            warnings.append(f"SerpAPI search failed for '{keyword}': {_safe_request_error(exc)}")
             continue
 
         for rank, item in enumerate(data.get("organic_results", []), start=1):
@@ -176,3 +177,22 @@ def _dedupe_results(results: list[SearchResult]) -> list[SearchResult]:
     ordered_urls = unique_preserve_order([result.url for result in results])
     by_url = {result.url: result for result in results}
     return [by_url[url] for url in ordered_urls]
+
+
+def _safe_request_error(exc: requests.RequestException) -> str:
+    message = str(exc)
+    request = getattr(exc, "request", None)
+    if request is not None and request.url:
+        message = message.replace(request.url, _redact_url_secret(request.url))
+    response = getattr(exc, "response", None)
+    if response is not None and response.url:
+        message = message.replace(response.url, _redact_url_secret(response.url))
+    return message
+
+
+def _redact_url_secret(url: str) -> str:
+    parsed = urlparse(url)
+    query = urlencode(
+        [(key, "***" if key.lower() in {"api_key", "key", "subscription-key"} else value) for key, value in parse_qsl(parsed.query, keep_blank_values=True)]
+    )
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, query, parsed.fragment))

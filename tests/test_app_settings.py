@@ -1,4 +1,6 @@
-from app import settings_for_provider, settings_with_secret_values
+import pandas as pd
+
+from app import build_url_dataframe, settings_for_provider, settings_with_secret_values
 from leadgen.config import Settings
 
 
@@ -30,3 +32,16 @@ def test_settings_with_secret_values_uses_configured_provider():
 
     assert updated.search_provider == "bing"
     assert updated.bing_search_api_key == "bing-key"
+
+
+def test_build_url_dataframe_does_not_search_on_page_load(monkeypatch):
+    def fail_discover(*args, **kwargs):
+        raise AssertionError("search API should not be called")
+
+    monkeypatch.setattr("app.discover_urls", fail_discover)
+    keywords_df = pd.DataFrame([{"keyword": "tuinmeubelen webshop", "category": "garden"}])
+    manual_df = pd.DataFrame([{"url": "https://example.nl", "category": "manual"}])
+
+    urls = build_url_dataframe(keywords_df, manual_df, Settings(search_provider="serpapi"), 5)
+
+    assert urls["url"].tolist() == ["https://example.nl/"]

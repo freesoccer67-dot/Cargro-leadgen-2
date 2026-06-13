@@ -116,12 +116,15 @@ def show_discovery_tab(settings: Settings) -> None:
         provider_api_key = ""
         if provider in {"brave", "bing", "serpapi"}:
             configured_key = provider_key_for_settings(settings, provider)
-            provider_api_key = st.text_input(
-                "API key",
-                value=configured_key,
-                type="password",
-                help="Use this when the website server does not have the provider key configured.",
-            ).strip()
+            if configured_key:
+                provider_api_key = configured_key
+                st.success(f"Permanent {provider} API key configured.")
+            else:
+                provider_api_key = st.text_input(
+                    "API key",
+                    type="password",
+                    help="Use this when the website server does not have the provider key configured.",
+                ).strip()
         max_results = st.number_input("Max results per keyword", min_value=1, max_value=50, value=20)
     with controls_right:
         import_file = st.file_uploader(
@@ -570,6 +573,7 @@ def build_url_dataframe(
     manual_df: pd.DataFrame,
     settings: Settings,
     limit_per_keyword: int,
+    use_search_api: bool = False,
 ) -> pd.DataFrame:
     rows: list[dict[str, str]] = []
 
@@ -586,7 +590,7 @@ def build_url_dataframe(
                     }
                 )
 
-    if not keywords_df.empty and "keyword" in keywords_df.columns:
+    if use_search_api and not keywords_df.empty and "keyword" in keywords_df.columns:
         keywords = [str(value).strip() for value in keywords_df["keyword"].tolist() if str(value).strip()]
         results, warnings = discover_urls(keywords, settings, limit_per_keyword=limit_per_keyword)
         for warning in warnings:
