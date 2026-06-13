@@ -33,7 +33,7 @@ def main() -> None:
     inject_netflix_theme()
     render_app_header()
 
-    settings = Settings()
+    settings = settings_with_streamlit_secrets(Settings())
     ensure_session_state()
 
     analysis_tab, discovery_tab = st.tabs(["Analyze Leads", "Discover Websites"])
@@ -211,6 +211,68 @@ def ensure_session_state() -> None:
     st.session_state.setdefault("crawl_log", pd.DataFrame())
     st.session_state.setdefault("candidate_urls", pd.DataFrame())
     st.session_state.setdefault("discovery_analysis_urls", pd.DataFrame(columns=["url", "category"]))
+
+
+def settings_with_streamlit_secrets(settings: Settings) -> Settings:
+    return settings_with_secret_values(settings, read_streamlit_secret_values())
+
+
+def settings_with_secret_values(settings: Settings, secrets: dict[str, str]) -> Settings:
+    search_provider = secrets.get("SEARCH_PROVIDER", "").strip().lower()
+    brave_key = secrets.get("BRAVE_SEARCH_API_KEY", "").strip()
+    bing_key = secrets.get("BING_SEARCH_API_KEY", "").strip()
+    serpapi_key = (
+        secrets.get("SERPAPI_API_KEY", "").strip() or secrets.get("SERPAPI_KEY", "").strip()
+    )
+
+    updates = {}
+    if search_provider:
+        updates["search_provider"] = search_provider
+    elif settings.search_provider == "manual" and serpapi_key:
+        updates["search_provider"] = "serpapi"
+    if brave_key:
+        updates["brave_search_api_key"] = brave_key
+    if bing_key:
+        updates["bing_search_api_key"] = bing_key
+    if serpapi_key:
+        updates["serpapi_api_key"] = serpapi_key
+    return replace(settings, **updates) if updates else settings
+
+
+def read_streamlit_secret_values() -> dict[str, str]:
+    keys = [
+        "SEARCH_PROVIDER",
+        "BRAVE_SEARCH_API_KEY",
+        "BING_SEARCH_API_KEY",
+        "SERPAPI_API_KEY",
+        "SERPAPI_KEY",
+    ]
+    values: dict[str, str] = {}
+    try:
+        secret_store = st.secrets
+    except Exception:
+        return values
+
+    for key in keys:
+        try:
+            value = secret_store.get(key, "")
+        except Exception:
+            value = ""
+        if value:
+            values[key] = str(value)
+
+    try:
+        search_secrets = secret_store.get("search", {})
+    except Exception:
+        search_secrets = {}
+    for key in keys:
+        try:
+            value = search_secrets.get(key, "") if search_secrets else ""
+        except AttributeError:
+            value = ""
+        if value:
+            values[key] = str(value)
+    return values
 
 
 def provider_key_for_settings(settings: Settings, provider: str) -> str:

@@ -1,4 +1,4 @@
-from app import settings_for_provider
+from app import settings_for_provider, settings_with_secret_values
 from leadgen.config import Settings
 
 
@@ -9,3 +9,24 @@ def test_settings_for_provider_uses_serpapi_key_from_ui():
 
     assert updated.search_provider == "serpapi"
     assert updated.serpapi_api_key == "secret-key"
+
+
+def test_settings_with_secret_values_defaults_to_serpapi_when_key_exists():
+    settings = Settings(search_provider="manual", serpapi_api_key="")
+
+    updated = settings_with_secret_values(settings, {"SERPAPI_API_KEY": "secret-key"})
+
+    assert updated.search_provider == "serpapi"
+    assert updated.serpapi_api_key == "secret-key"
+
+
+def test_settings_with_secret_values_uses_configured_provider():
+    settings = Settings(search_provider="manual", serpapi_api_key="")
+
+    updated = settings_with_secret_values(
+        settings,
+        {"SEARCH_PROVIDER": "bing", "BING_SEARCH_API_KEY": "bing-key"},
+    )
+
+    assert updated.search_provider == "bing"
+    assert updated.bing_search_api_key == "bing-key"
