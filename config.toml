@@ -1,0 +1,12 @@
+streamlit>=1.35
+pandas>=2.2
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.2
+tldextract>=5.1
+openpyxl>=3.1
+python-dotenv>=1.0
+pytest>=8.0
+
+# Optional JavaScript rendering fallback. Install separately if needed:
+# playwright>=1.44
